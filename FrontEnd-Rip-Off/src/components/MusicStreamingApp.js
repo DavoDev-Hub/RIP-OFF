@@ -239,6 +239,18 @@ export default function MusicStreamingApp() {
   useEffect(() => {
     localStorage.setItem("queue", JSON.stringify(queue));
   }, [queue]);
+  useEffect(() => {
+    if (userId) {
+      const updateQueueInFirestore = async () => {
+        const queueRef = doc(db, "queues", userId);
+        await setDoc(queueRef, {
+          user_id: userId,
+          song_order: queue.map((song) => song.id),
+        });
+      };
+      updateQueueInFirestore();
+    }
+  }, [queue, userId]);
 
   // Cargar la cola de reproducción desde localStorage o Firestore al iniciar
   // Cargar la cola de reproducción desde localStorage o Firestore al iniciar
@@ -943,8 +955,18 @@ export default function MusicStreamingApp() {
   };
 
   const handlePlaySong = (song) => {
-    setQueue([song]);
-    setCurrentTrack(0);
+    const songIndex = queue.findIndex((s) => s.id === song.id);
+
+    if (songIndex === -1) {
+      // Si la canción no está en la cola, la agrega al final
+      setQueue((prevQueue) => [...prevQueue, song]);
+      setCurrentTrack(queue.length); // La reproduce como la última canción
+    } else {
+      // Si ya está en la cola, simplemente la selecciona
+      setCurrentTrack(songIndex);
+    }
+
+    setIsPlaying(true); // Inicia la reproducción
   };
 
   // Pausar manualmente y actualizar el estado

@@ -10,12 +10,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); 
-  
+  const navigate = useNavigate();
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(null);
-  
+
     try {
       const response = await fetch("http://localhost:8080/api/authenticate", {
         method: "POST",
@@ -24,16 +24,16 @@ export default function LoginPage() {
         },
         body: JSON.stringify({ correo, password }),
       });
-  
+
       if (response.ok) {
         const data = await response.json();
         const token = data.token;
         const userId = data.userId; // Asegúrate de que esto coincide con la respuesta del backend
-        
+
         // Almacenar el token y el userId en localStorage
         localStorage.setItem("token", `Bearer ${token}`);
-        localStorage.setItem("userId",  data.userId); // Guarda el userId
-  
+        localStorage.setItem("userId", data.userId); // Guarda el userId
+
         // Redirigir a la página de música si el login es exitoso
         navigate("/music");
       } else if (response.status === 401) {
@@ -53,11 +53,7 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-white">Iniciar sesión</h1>
         </div>
 
-        {error && (
-          <div className="mb-4 text-red-500 text-center">
-            {error}
-          </div>
-        )}
+        {error && <div className="mb-4 text-red-500 text-center">{error}</div>}
 
         <form className="space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4">

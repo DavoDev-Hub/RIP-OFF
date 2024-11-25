@@ -13,15 +13,20 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    // Registro de usuario
     @PostMapping("/register")
     public ResponseEntity<User> registerUser(@RequestBody User user) {
         User newUser = userService.registerUser(user);
-        return ResponseEntity.ok(newUser);
+        return ResponseEntity.ok(newUser); // Devuelve el usuario, incluyendo userId
     }
 
-    @GetMapping("/{correo}")
+    // Obtener un usuario por su correo (solo si es necesario)
+    @GetMapping("/correo/{correo}")
     public ResponseEntity<User> getUserByCorreo(@PathVariable String correo) {
         User user = userService.findByCorreo(correo);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.ok(user);
     }
 }

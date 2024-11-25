@@ -26,6 +26,7 @@ public class LoginController {
 
     @PostMapping("/authenticate")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+        // Buscar usuario por correo
         User user = userService.findByCorreo(loginRequest.getCorreo());
         if (user == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             return ResponseEntity.status(401).body("Credenciales incorrectas");
@@ -33,11 +34,12 @@ public class LoginController {
 
         // Generar el token JWT
         String token = jwtUtil.generateToken(user.getCorreo());
-        Long userId = user.getId(); // Obtén el ID de usuario
+        String userId = user.getId(); // Cambiado a String para UUID
 
-        Map<String, Object> response = new HashMap<>(); // Cambiado a Map<String, Object>
+        // Preparar la respuesta
+        Map<String, Object> response = new HashMap<>();
         response.put("token", token);
-        response.put("userId", userId); // userId ahora se puede almacenar como Long
+        response.put("userId", userId); // Ahora devuelve UUID como userId
         return ResponseEntity.ok(response);
     }
 }
