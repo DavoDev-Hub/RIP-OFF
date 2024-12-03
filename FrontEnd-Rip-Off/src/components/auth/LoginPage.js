@@ -27,11 +27,8 @@ export default function LoginPage() {
 
       if (response.ok) {
         const data = await response.json();
-        const token = data.token;
         const userId = data.userId; // Asegúrate de que esto coincide con la respuesta del backend
 
-        // Almacenar el token y el userId en localStorage
-        localStorage.setItem("token", `Bearer ${token}`);
         localStorage.setItem("userId", data.userId); // Guarda el userId
 
         // Redirigir a la página de música si el login es exitoso
@@ -99,12 +96,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox id="remember" />
-              <Label htmlFor="remember" className="text-sm text-gray-200">
-                Recordarme
-              </Label>
-            </div>
+            <div className="flex items-center space-x-2"></div>
           </div>
 
           <Button

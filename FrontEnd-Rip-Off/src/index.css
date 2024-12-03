@@ -2,9 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @font-face {
-    font-family: "Circular";
-    src: local(CircularStd),
-    url('./components/ui/CircularStd.ttf') format("truetype");
+  font-family: "Circular";
+  src: local(CircularStd),
+    url("./components/ui/CircularStd.ttf") format("truetype");
+}
+/* Estilo para navegadores compatibles con ::-webkit-scrollbar */
+::-webkit-scrollbar {
+  width: 12px; /* Ancho del scrollbar */
+  height: 12px; /* Alto del scrollbar (para scroll horizontal) */
+}
+
+::-webkit-scrollbar-track {
+  background: #181818; /* Color de fondo del track */
+  border-radius: 10px; /* Esquinas redondeadas */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ed1c24; /* Color del scrollbar */
+  border-radius: 10px; /* Esquinas redondeadas */
+  border: 3px solid #181818; /* Espacio entre el scrollbar y el track */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ff5733; /* Color del scrollbar al pasar el mouse */
+}
+
+/* Opcional: Estilo para navegadores que no soportan ::-webkit-scrollbar */
+.scroll-container {
+  scrollbar-color: #ed1c24 #181818; /* Color del thumb y el track */
+  scrollbar-width: medium; /* Grosor del scrollbar */
 }

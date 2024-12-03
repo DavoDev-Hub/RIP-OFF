@@ -20,6 +20,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/Avatar";
 import { ScrollArea } from "../components/ui/ScrollArea";
+import axios from "axios";
 
 import {
   Home,
@@ -78,11 +79,31 @@ export default function MusicStreamingApp() {
   const [queue, setQueue] = useState([]);
   const audioRef = useRef(null);
   const [userId, setUserId] = useState(null);
+  const [profilePictureUrl, setProfilePictureUrl] = useState(""); // Estado para la URL de la imagen
+  const [newPassword, setNewPassword] = useState("");
+  const [nombreDePerfil, setNombreDePerfil] = useState(""); // Agregar estado
+  const [showImagePopup, setShowImagePopup] = useState(false);
+  const handleLikeButtonClick = (e, song) => {
+    e.preventDefault(); // Previene la recarga/redirección
+    e.stopPropagation(); // Detiene la propagación a elementos padres
+    console.log("Like button clicked for song:", song);
+    toggleLikeSong(song); // Alterna el estado de "Me Gusta"
+  };
 
   useEffect(() => {
     const storedUserId = localStorage.getItem("userId");
     if (storedUserId) {
       setUserId(storedUserId);
+
+      axios
+        .get(`http://localhost:8080/api/users/${storedUserId}`)
+        .then((response) => {
+          setProfilePictureUrl(response.data.profilePictureUrl); // Almacena la URL de la imagen
+          setNombreDePerfil(response.data.nombreDePerfil); // Almacena el nombre de perfil
+        })
+        .catch((error) => {
+          console.error("Error al obtener los datos del usuario:", error);
+        });
     } else {
       console.error("User ID no encontrado en localStorage");
     }
@@ -213,6 +234,40 @@ export default function MusicStreamingApp() {
         song.artist.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (!newPassword) {
+      alert("Por favor ingresa una nueva contraseña.");
+      return;
+    }
+
+    try {
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        alert("Usuario no identificado.");
+        return;
+      }
+
+      // Aquí usaremos Axios para enviar la nueva contraseña al backend
+      axios
+        .put(`http://localhost:8080/api/users/${userId}/password`, {
+          password: newPassword,
+        })
+        .then((response) => {
+          console.log("Contraseña actualizada correctamente");
+        })
+        .catch((error) => {
+          console.error("Error al cambiar la contraseña:", error);
+        });
+
+      alert("Contraseña cambiada exitosamente.");
+      setNewPassword(""); // Limpia el input
+      setShowPasswordPopup(false); // Cierra el popup
+    } catch (error) {
+      console.error("Error al cambiar la contraseña:", error);
+      alert("Hubo un error al cambiar la contraseña.");
+    }
+  };
   const handleAddToQueue = (song) => {
     // Verifica que la canción no esté ya en la cola
     if (!queue.some((s) => s.id === song.id)) {
@@ -251,6 +306,25 @@ export default function MusicStreamingApp() {
       updateQueueInFirestore();
     }
   }, [queue, userId]);
+
+  const handleUpdateProfilePicture = () => {
+    if (!userId) {
+      console.error("User ID no encontrado");
+      return;
+    }
+
+    axios
+      .put(`http://localhost:8080/api/users/${userId}/profile-picture`, {
+        profilePictureUrl,
+      })
+      .then((response) => {
+        alert("Imagen de perfil actualizada correctamente.");
+      })
+      .catch((error) => {
+        console.error("Error al actualizar la imagen de perfil:", error);
+        alert("Hubo un error al actualizar la imagen de perfil.");
+      });
+  };
 
   // Cargar la cola de reproducción desde localStorage o Firestore al iniciar
   // Cargar la cola de reproducción desde localStorage o Firestore al iniciar
@@ -625,10 +699,9 @@ export default function MusicStreamingApp() {
     setLikedSongs(updatedLikedSongs);
     localStorage.setItem("likedSongs", JSON.stringify(updatedLikedSongs));
 
-    // Mantén `displayedSongs` igual si no estamos en la lista de "Tus Me Gusta".
-    if (selectedPlaylist !== "Tus Me Gusta") {
-      setDisplayedSongs(allSongs);
-      console.log("Manteniendo displayedSongs en Inicio", displayedSongs);
+    // Si estamos en la playlist "Tus Me Gusta", actualiza las canciones mostradas
+    if (selectedPlaylist === "Tus Me Gusta") {
+      setDisplayedSongs(updatedLikedSongs);
     }
   };
 
@@ -1060,7 +1133,7 @@ export default function MusicStreamingApp() {
             animate={{ opacity: 1 }}
           >
             <h1 className="text-2xl font-bold font-bold font-primaryCircular text-[#ED1C24] ">
-              Rip-Off Music
+              RipOff Music
             </h1>
           </motion.div>
           <nav className="font-primaryCircular flex-1 overflow-y-auto">
@@ -1163,9 +1236,8 @@ export default function MusicStreamingApp() {
 
         <main className="flex-1 flex flex-col overflow-hidden">
           <header className="bg-[#181818] h-16 flex items-center justify-between px-4">
-            <div className="flex items-center"></div>
-            <div className="font-primaryCircular flex-1 max-w-xl px-4">
-              <div className="relative">
+            <div className="flex-1 flex justify-center">
+              <div className="relative max-w-xl w-full">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <Input
                   type="search"
@@ -1176,15 +1248,27 @@ export default function MusicStreamingApp() {
                 />
               </div>
             </div>
-            <Button onClick={toggleSettingsPopup}>
-              <Avatar>
-                <AvatarImage
-                  src="https://static.wixstatic.com/media/cdb00b_e1464f187f5642aab5b1e09cb7e0381d~mv2.jpg/v1/fill/w_1507,h_1019,al_c/cdb00b_e1464f187f5642aab5b1e09cb7e0381d~mv2.jpg"
-                  alt="@user"
-                />
-                <AvatarFallback>CN</AvatarFallback>
-              </Avatar>
-            </Button>
+            <div className="flex items-center space-x-4">
+              {/* Nombre del usuario */}
+              <span className="text-white text-sm font-medium">
+                {nombreDePerfil || "Usuario"}{" "}
+                {/* Muestra el nombre o 'Usuario' por defecto */}
+              </span>
+              {/* Avatar */}
+              <Button onClick={toggleSettingsPopup}>
+                <Avatar>
+                  <AvatarImage
+                    src={
+                      profilePictureUrl ||
+                      "https://thumbs.dreamstime.com/b/icono-del-perfil-del-placeholder-del-defecto-90197993.jpg"
+                    } // Imagen por defecto si no hay URL
+                    alt="Perfil"
+                    className="w-full h-full rounded-full object-cover border border-gray-700"
+                  />
+                  <AvatarFallback>CN</AvatarFallback>
+                </Avatar>
+              </Button>
+            </div>
           </header>
 
           <ScrollArea className="flex-1 pb-24">
@@ -1213,10 +1297,19 @@ export default function MusicStreamingApp() {
                       <Button
                         size="sm"
                         className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#ED1C24] hover:bg-[#af0e14] text-white"
-                        onClick={() => openAddToPlaylistPopup(song)}
+                        onClick={(e) => {
+                          e.preventDefault(); // Detiene la recarga de la página si fuera un formulario
+                          e.stopPropagation(); // Evita que el evento se propague al contenedor padre
+                          handleLikeButtonClick(e, song); // Maneja el evento de "like"
+                        }}
                       >
-                        <Plus className="h-4 w-4" />
+                        {likedSongs.some((liked) => liked.id === song.id) ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Heart className="h-4 w-4" />
+                        )}
                       </Button>
+
                       <Button
                         size="sm"
                         className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#ED1C24] hover:bg-[#af0e14] text-white"
@@ -1339,139 +1432,187 @@ export default function MusicStreamingApp() {
 
           {/* Modal para la configuración */}
           {showSettingsPopup && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-[#181818] border bg-[#181818] border-red-500 p-6 rounded-lg w-96 p-6 rounded-lg shadow-lg max-w-sm w-full">
-                <div className="flex justify-between  items-center mb-4">
-                  <h2 className="text-2xl font-primaryCircular">
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+              <div className="bg-[#1e1e1e] p-6 rounded-lg shadow-lg max-w-sm w-full">
+                {/* Encabezado */}
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-white">
                     Configuración
                   </h2>
-                  <div className="bg-[#3d3d3d]  rounded-lg hover:bg-[#af0e14]">
-                    <Button
-                      variant="ghost"
-                      size="small"
-                      onClick={toggleSettingsPopup}
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
-                  </div>
+                  <button
+                    className="p-2 rounded-full bg-gray-700 hover:bg-gray-600 focus:outline-none"
+                    onClick={toggleSettingsPopup}
+                  >
+                    <X className="h-5 w-5 text-white" />
+                  </button>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-xl">Cuenta</h3>
-                  <div className="flex items-center space-x-4 bg-[#3d3d3d] rounded-lg p-4 hover:bg-[#af0e14]">
-                    <div className="relative">
+                {/* Sección de cuenta */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-300 mb-2">
+                    Cuenta
+                  </h3>
+
+                  {/* Imagen de perfil con popup */}
+                  <div className="mt-4 flex flex-col items-center space-y-2">
+                    {/* Imagen de perfil con ícono de lápiz al pasar el mouse */}
+                    <div className="relative w-24 h-24 group">
                       <img
-                        src="https://static.wixstatic.com/media/cdb00b_e1464f187f5642aab5b1e09cb7e0381d~mv2.jpg/v1/fill/w_1507,h_1019,al_c/cdb00b_e1464f187f5642aab5b1e09cb7e0381d~mv2.jpg" // Replace with the user's profile image URL
-                        alt="Profile"
-                        className="w-16 h-16 rounded-full object-cover"
+                        src={
+                          profilePictureUrl ||
+                          "https://thumbs.dreamstime.com/b/icono-del-perfil-del-placeholder-del-defecto-90197993.jpg"
+                        }
+                        alt="Imagen de perfil"
+                        className="w-full h-full rounded-full object-cover border border-gray-700"
                       />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer">
+                      {/* Ícono de lápiz que aparece al hacer hover */}
+                      <div
+                        className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        onClick={() => setShowImagePopup(true)} // Muestra el popup al hacer clic
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          className="w-6 h-6 text-white"
+                          strokeWidth={2}
+                          stroke="white"
+                          className="w-6 h-6"
                         >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M12 4v16m8-8H4"
+                            d="M15.232 5.232l3.536 3.536m-2.036-2.036l-9 9-3.182 1.061 1.061-3.182 9-9zm0 0L17 3a2.828 2.828 0 114 4l-1.768 1.768z"
                           />
                         </svg>
                       </div>
-                      <input
-                        type="file"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
                     </div>
-                    <Button variant="ghost">Cambiar Foto</Button>
+
+                    {/* Nombre de perfil */}
+                    <p className="text-white text-base font-medium">
+                      {nombreDePerfil || "No definido"}
+                    </p>
                   </div>
-                  <h3 className="text-xl">Suscripción</h3>
-                  <div className="space-y-4 bg-[#3d3d3d] rounded-lg hover:bg-[#af0e14]">
-                    <Button variant="ghost" onClick={togglePlansPopup}>
-                      Planes disponibles
-                    </Button>
+                </div>
+
+                {/* Popup para ingresar la URL */}
+                {showImagePopup && (
+                  <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+                    <div className="bg-[#1e1e1e] p-6 rounded-lg shadow-lg max-w-sm w-full">
+                      <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-white">
+                          Actualizar imagen
+                        </h2>
+                        <button
+                          className="p-2 rounded-full bg-gray-700 hover:bg-gray-600 focus:outline-none"
+                          onClick={() => setShowImagePopup(false)}
+                        >
+                          <X className="h-5 w-5 text-white" />
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="URL de nueva imagen"
+                        value={profilePictureUrl}
+                        onChange={(e) => setProfilePictureUrl(e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white placeholder-gray-400 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
+                      />
+                      <button
+                        className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition focus:outline-none"
+                        onClick={() => {
+                          handleUpdateProfilePicture();
+                          setShowImagePopup(false); // Cierra el popup después de actualizar
+                        }}
+                      >
+                        Guardar
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="text-xl">Seguridad y privacidad</h3>
-                  <div className="space-y-4 bg-[#3d3d3d] rounded-lg  hover:bg-[#af0e14]">
-                    <Button variant="ghost" onClick={togglePasswordPopup}>
-                      Cambiar contraseña
-                    </Button>
-                  </div>
-                  <div className="space-y-4 bg-[#3d3d3d] rounded-lg hover:bg-[#af0e14]">
-                    <Link
-                      to="/login"
-                      className="text-white hover:text-[#ED1C24] font-medium"
-                    >
-                      <Button variant="ghost">Cerrar sesión</Button>
-                    </Link>
-                  </div>
+                )}
+
+                {/* Sección de suscripción */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-300">
+                    Suscripción
+                  </h3>
+                  <button
+                    className="mt-2 w-full px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition focus:outline-none"
+                    onClick={togglePlansPopup}
+                  >
+                    Planes disponibles
+                  </button>
+                </div>
+
+                {/* Sección de seguridad y privacidad */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-300">
+                    Seguridad y privacidad
+                  </h3>
+                  <button
+                    className="mt-2 w-full px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition focus:outline-none"
+                    onClick={togglePasswordPopup}
+                  >
+                    Cambiar contraseña
+                  </button>
+                </div>
+
+                {/* Botón para cerrar sesión */}
+                <div>
+                  <button
+                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition focus:outline-none"
+                    onClick={() => {
+                      toggleSettingsPopup();
+                      localStorage.removeItem("userId");
+                      window.location.href = "/login"; // Redirige al inicio de sesión
+                    }}
+                  >
+                    Cerrar sesión
+                  </button>
                 </div>
               </div>
             </div>
           )}
-
           {showPasswordPopup && (
-            <div className="fixed inset-0 bg-black  bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-[#181818] p-6 border bg-[#181818] border-red-500 p-6 rounded-lg w-80 rounded-lg shadow-lg max-w-sm w-80">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-primaryCircular">
-                    Cambiar contrasena
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+              <div className="bg-[#1e1e1e] p-6 rounded-lg shadow-lg max-w-sm w-full">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-white">
+                    Cambiar contraseña
                   </h2>
-                  <div className="bg-[#3d3d3d] rounded-lg hover:bg-[#af0e14]">
-                    <Button
-                      variant="ghost"
-                      size="small"
-                      onClick={togglePasswordPopup}
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
-                  </div>
+                  <button
+                    className="p-2 rounded-full bg-gray-700 hover:bg-gray-600 focus:outline-none"
+                    onClick={togglePasswordPopup}
+                  >
+                    <X className="h-5 w-5 text-white" />
+                  </button>
                 </div>
-                <div className=" mt-2 relative w-full">
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword1 ? "text" : "password"}
-                      placeholder="Crea tu contraseña"
-                      className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-400 pr-20 rounded-lg p-2"
-                      required
-                    />
+                <form onSubmit={handlePasswordChange}>
+                  <div className="mb-4">
+                    <div className="relative">
+                      <input
+                        type={showPassword1 ? "text" : "password"}
+                        placeholder="Nueva contraseña"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white placeholder-gray-400 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword1(!showPassword1)}
+                        className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                      >
+                        {showPassword1 ? "Ocultar" : "Mostrar"}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
                     <button
-                      type="button"
-                      onClick={() => setShowPassword1(!showPassword1)}
-                      className="absolute top-1/2 right-2 transform -translate-y-1/2 px-2 py-1 text-sm text-gray-400 hover:text-white focus:outline-none"
+                      type="submit"
+                      className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition focus:outline-none"
                     >
-                      {showPassword1 ? "Ocultar" : "Mostrar"}
+                      Cambiar contraseña
                     </button>
                   </div>
-                </div>
-
-                <div className=" mt-2 relative w-full">
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Crea tu contraseña"
-                      className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-400 pr-20 rounded-lg p-2"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute top-1/2 right-2 transform -translate-y-1/2 px-2 py-1 text-sm text-gray-400 hover:text-white focus:outline-none"
-                    >
-                      {showPassword ? "Ocultar" : "Mostrar"}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <Button variant="ghost" className="bg-[#ED1C24] mt-6">
-                    {isEditing ? "Actualizar" : "Crear"}
-                  </Button>
-                </div>
+                </form>
               </div>
             </div>
           )}
@@ -1498,7 +1639,7 @@ export default function MusicStreamingApp() {
                       <span className="text-[#ED1C24]">$179</span>/mes
                     </p>
                     <Button className="bg-[#3d3d3d] text-white hover:bg-[#af0e14] w-full font">
-                      ÚNETE AHORA →
+                      PROXIMAMENTE
                     </Button>
                     <p className="text-sm mt-4">
                       La suscripción continúa automáticamente. <br />

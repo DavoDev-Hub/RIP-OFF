@@ -1,6 +1,5 @@
 package com.example.BackEnd_Rip_Off.controllers;
 
-import com.example.BackEnd_Rip_Off.config.JwtUtil;
 import com.example.BackEnd_Rip_Off.models.User;
 import com.example.BackEnd_Rip_Off.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +20,6 @@ public class LoginController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private JwtUtil jwtUtil;
-
     @PostMapping("/authenticate")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         // Buscar usuario por correo
@@ -33,12 +29,10 @@ public class LoginController {
         }
 
         // Generar el token JWT
-        String token = jwtUtil.generateToken(user.getCorreo());
         String userId = user.getId(); // Cambiado a String para UUID
 
         // Preparar la respuesta
         Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
         response.put("userId", userId); // Ahora devuelve UUID como userId
         return ResponseEntity.ok(response);
     }
