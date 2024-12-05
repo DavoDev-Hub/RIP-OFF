@@ -59,11 +59,12 @@ export default function LoginPage() {
                 htmlFor="correo"
                 className="text-sm font-medium text-gray-200"
               >
-                Correo electrónico o nombre de usuario
+                Correo electrónico
               </Label>
+              s
               <Input
                 id="correo"
-                placeholder="Correo electrónico o nombre de usuario"
+                placeholder="Correo electrónico"
                 className="w-full bg-gray-800 border-gray-700 text-white placeholder-gray-400"
                 value={correo}
                 onChange={(e) => setCorreo(e.target.value)}

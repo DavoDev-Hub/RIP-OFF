@@ -40,12 +40,6 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con el ID: " + userId));
 
-        // Validar que la nueva contraseña cumpla con los requisitos mínimos (opcional)
-        if (!isStrongPassword(newPassword)) {
-            throw new IllegalArgumentException(
-                    "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número.");
-        }
-
         // Encriptar la nueva contraseña
         String encryptedPassword = passwordEncoder.encode(newPassword);
         user.setPassword(encryptedPassword);
@@ -53,13 +47,4 @@ public class UserService {
         // Guardar los cambios en la base de datos
         userRepository.save(user);
     }
-
-    // Método opcional para validar la fortaleza de la contraseña
-    private boolean isStrongPassword(String password) {
-        return password.length() >= 8
-                && password.matches(".*[A-Z].*") // Al menos una letra mayúscula
-                && password.matches(".*[a-z].*") // Al menos una letra minúscula
-                && password.matches(".*\\d.*"); // Al menos un número
-    }
-
 }

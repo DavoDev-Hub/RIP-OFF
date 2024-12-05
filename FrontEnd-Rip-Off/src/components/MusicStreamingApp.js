@@ -185,18 +185,9 @@ export default function MusicStreamingApp() {
   }, []);
 
   useEffect(() => {
-    if (selectedPlaylist === "Tus Me Gusta") {
-      showLikedSongs();
-    }
-  }, [likedSongs, selectedPlaylist]);
+    setDisplayedSongs(allSongs); // Muestra siempre todas las canciones al inicio
+  }, [allSongs]);
 
-  useEffect(() => {
-    if (selectedPlaylist === "Tus Me Gusta") {
-      setDisplayedSongs([...likedSongs]); // Asegura que displayedSongs muestre likedSongs
-    }
-  }, [likedSongs, selectedPlaylist]);
-
-  // Función para mostrar todas las canciones
   const showAllSongs = () => {
     setDisplayedSongs(allSongs);
   };
@@ -675,7 +666,7 @@ export default function MusicStreamingApp() {
   };
 
   const toggleLikeSong = async (song) => {
-    if (!userId) return;
+    if (!userId) return; // Asegúrate de que el usuario esté autenticado
 
     const likesRef = doc(db, "likes", userId);
     const likesDoc = await getDoc(likesRef);
@@ -684,25 +675,25 @@ export default function MusicStreamingApp() {
 
     if (likesDoc.exists()) {
       const isLiked = likesDoc.data().songs.includes(song.id);
+
       if (isLiked) {
+        // Si ya está en la lista, remuévelo
         await updateDoc(likesRef, { songs: arrayRemove(song.id) });
         updatedLikedSongs = likedSongs.filter((liked) => liked.id !== song.id);
       } else {
+        // Si no está, agrégalo
         await updateDoc(likesRef, { songs: arrayUnion(song.id) });
         updatedLikedSongs = [...likedSongs, song];
       }
     } else {
+      // Si no existe el documento, crea uno nuevo
       await setDoc(likesRef, { songs: [song.id] });
       updatedLikedSongs = [...likedSongs, song];
     }
 
+    // Actualiza el estado de React sin redirigir ni recargar
     setLikedSongs(updatedLikedSongs);
     localStorage.setItem("likedSongs", JSON.stringify(updatedLikedSongs));
-
-    // Si estamos en la playlist "Tus Me Gusta", actualiza las canciones mostradas
-    if (selectedPlaylist === "Tus Me Gusta") {
-      setDisplayedSongs(updatedLikedSongs);
-    }
   };
 
   const selectPlaylistForQueue = (playlistName) => {
@@ -1297,10 +1288,17 @@ export default function MusicStreamingApp() {
                       <Button
                         size="sm"
                         className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#ED1C24] hover:bg-[#af0e14] text-white"
+                        onClick={() => openAddToPlaylistPopup(song)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#ED1C24] hover:bg-[#af0e14] text-white"
                         onClick={(e) => {
-                          e.preventDefault(); // Detiene la recarga de la página si fuera un formulario
-                          e.stopPropagation(); // Evita que el evento se propague al contenedor padre
-                          handleLikeButtonClick(e, song); // Maneja el evento de "like"
+                          e.stopPropagation(); // Detén la propagación para evitar eventos no deseados
+                          toggleLikeSong(song); // Actualiza "Me Gusta" sin redirigir
                         }}
                       >
                         {likedSongs.some((liked) => liked.id === song.id) ? (
@@ -1310,19 +1308,6 @@ export default function MusicStreamingApp() {
                         )}
                       </Button>
 
-                      <Button
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#ED1C24] hover:bg-[#af0e14] text-white"
-                        onClick={() => {
-                          toggleLikeSong(song); // Marca o desmarca la canción como "Me Gusta"
-                        }}
-                      >
-                        {likedSongs.some((liked) => liked.id === song.id) ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Heart className="h-4 w-4" />
-                        )}
-                      </Button>
                       <Button
                         size="sm"
                         className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#ED1C24] hover:bg-[#af0e14] text-white"
