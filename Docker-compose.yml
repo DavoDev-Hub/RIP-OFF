@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  oracle-db:
+    image: gvenzl/oracle-xe
+    container_name: oracle-db
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: oracle
+    volumes:
+      - oracle-data:/opt/oracle/oradata # Volumen persistente para los datos de Oracle
+      - ./oracle-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'select 1 from dual;' | sqlplus -s system/oracle@//localhost:1521/xepdb1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: DockerFiles/Dockerfile.backend
+    container_name: backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@oracle-db:1521/xepdb1
+      SPRING_DATASOURCE_USERNAME: davo
+      SPRING_DATASOURCE_PASSWORD: al280622
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: DockerFiles/Dockerfile.frontend
+    container_name: frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./FrontEnd-Rip-Off/build:/usr/share/nginx/html
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  oracle-data: # Define el volumen persistente para Oracle
